@@ -5,10 +5,12 @@ import csv
 import json
 import boto3 
 import requests
-from fake_useragent import UserAgent
+# from fake_useragent import UserAgent
+from random_user_agent.user_agent import UserAgent
+from random_user_agent.params import SoftwareName, OperatingSystem
 
-base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
-# base_url = "http://127.0.0.1:8000/"
+# base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
+base_url = "http://127.0.0.1:8000/"
 
 class GetGoogleSearchKeywords:
     def __init__(self):
@@ -21,6 +23,13 @@ class GetGoogleSearchKeywords:
         self.api_rate_limit = 0
         self.keywords_count = 0
         self.results = []
+
+    def getUserAgent(self):
+        software_names = [SoftwareName.CHROME.value]
+        operating_systems = [OperatingSystem.WINDOWS.value]
+        user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100) 
+        user_agent = user_agent_rotator.get_random_user_agent()
+        return user_agent
 
     def checkSeedKeywordExists(self, keyword, meta_keyword):
         """ 
@@ -36,8 +45,9 @@ class GetGoogleSearchKeywords:
         """ return list of suggestion based on the geolocation and language for a seed keyword """
         url = "http://suggestqueries.google.com/complete/search?client=chrome&hl={}&gl={}&callback=?&q={}".format(
             self.language, self.country, keyword)
-        ua = UserAgent(use_cache_server=False, verify_ssl=False)
-        headers = {"user-agent": ua.chrome, "dataType": "jsonp"}
+        # ua = UserAgent(use_cache_server=False, verify_ssl=False)
+        # headers = {"user-agent": ua.chrome, "dataType": "jsonp"}
+        headers = {"user-agent": self.getUserAgent(), "dataType": "jsonp"}
 
         response = requests.get(url, headers=headers, verify=True)
         suggestions = json.loads(response.text)

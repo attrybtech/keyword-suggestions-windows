@@ -84,7 +84,7 @@ def getSearchKeywords():
                 # checks api rate limit exceeds 750
                 if keyword_getter.api_rate_limit >= 750 :
                     keyword_getter.api_rate_limit = 0
-                    time.sleep(5)
+                    time.sleep(10)
             except:
                 time.sleep(15)
                 continue
