@@ -17,7 +17,7 @@ class GetGoogleSearchKeywords:
         self.already_fetched = set()
         self.country = "US"
         self.language = "en"
-        self.threshold_count = 300
+        self.threshold_count = 50000
         self.api_rate_limit = 0
         self.keywords_count = 0
         self.results = []
