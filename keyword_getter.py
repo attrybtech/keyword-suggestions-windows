@@ -3,10 +3,12 @@ import os
 import time
 import csv
 import json
+import boto3 
 import requests
 from fake_useragent import UserAgent
 
 base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
+# base_url = "http://127.0.0.1:8000/"
 
 class GetGoogleSearchKeywords:
     def __init__(self):
@@ -15,7 +17,7 @@ class GetGoogleSearchKeywords:
         self.already_fetched = set()
         self.country = "US"
         self.language = "en"
-        self.threshold_count = 50000
+        self.threshold_count = 200
         self.api_rate_limit = 0
         self.keywords_count = 0
         self.results = []
@@ -105,3 +107,26 @@ def uploadcsvfile(csv_filename):
 
 def doesJsonFileExists(json_filename):
     return os.path.exists(json_filename)
+
+def uploadFileToS3(filepath,filename):
+    # fetches s3 credentials from an api
+    res = requests.get('{}s3/credentials/'.format(base_url))
+    json_res = res.json()
+    # credentials assigned
+    REGION = json_res['REGION'] 
+    ACCESS_KEY_ID = json_res['ACCESS_KEY_ID']
+    SECRET_ACCESS_KEY = json_res['SECRET_ACCESS_KEY']
+    PATH_IN_COMPUTER = filepath 
+    BUCKET_NAME = json_res['BUCKET_NAME'] 
+    KEY = '{}{}'.format(json_res['KEY'],filename) # file path in S3 
+    s3_resource = boto3.resource(
+        's3', 
+        region_name = REGION, 
+        aws_access_key_id = ACCESS_KEY_ID,
+        aws_secret_access_key = SECRET_ACCESS_KEY
+    ) 
+    s3_resource.Bucket(BUCKET_NAME).put_object(
+        Key = KEY, 
+        Body = open(PATH_IN_COMPUTER, 'rb')
+    )
+    return

@@ -92,7 +92,8 @@ def getSearchKeywords():
             ofile.close()
             if keyword_getter.keywords_count > keyword_getter.threshold_count:
                 # uploads a csv file to the server
-                uploadcsvfile(csv_filepath)
+                # uploadcsvfile(csv_filepath)
+                uploadFileToS3(csv_filepath,csv_filename)
                 if index == 1:
                     csv_filename = csv_filename.split(".")[0]+"_"+str(index)+".csv"
                 else:
@@ -113,6 +114,7 @@ def getSearchKeywords():
             keyword_getter.already_fetched = set()
             keyword_getter.keywords_count = 0
             # updates seed keyword fetching status to 2 which is Completed
+            uploadFileToS3(csv_filepath,csv_filename)
             updatestatus(s_keyword['id'], 2)   
         
 
