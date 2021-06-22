@@ -9,8 +9,8 @@ import requests
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
 
-# base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
-base_url = "http://127.0.0.1:8000/"
+base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
+# base_url = "http://127.0.0.1:8000/"
 
 class GetGoogleSearchKeywords:
     def __init__(self):
