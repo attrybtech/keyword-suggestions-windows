@@ -94,6 +94,7 @@ def getSearchKeywords():
                 # uploads a csv file to the server
                 # uploadcsvfile(csv_filepath)
                 uploadFileToS3(csv_filepath,csv_filename)
+                # need to uncomment these lines after fetching 10 categories data
                 if index == 1:
                     csv_filename = csv_filename.split(".")[0]+"_"+str(index)+".csv"
                 else:
@@ -112,9 +113,14 @@ def getSearchKeywords():
         if stop == 0:
             keyword_getter.queue = set()
             keyword_getter.already_fetched = set()
+            keyword_getter.results = []
             keyword_getter.keywords_count = 0
             # updates seed keyword fetching status to 2 which is Completed
-            uploadFileToS3(csv_filepath,csv_filename)
+            try:
+                if os.stat(csv_filepath).st_size != 0:
+                    uploadFileToS3(csv_filepath,csv_filename)
+            except:
+                pass
             updatestatus(s_keyword['id'], 2)   
         
 

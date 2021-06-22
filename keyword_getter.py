@@ -17,7 +17,7 @@ class GetGoogleSearchKeywords:
         self.already_fetched = set()
         self.country = "US"
         self.language = "en"
-        self.threshold_count = 200
+        self.threshold_count = 300
         self.api_rate_limit = 0
         self.keywords_count = 0
         self.results = []
@@ -73,8 +73,12 @@ class GetGoogleSearchKeywords:
             for query in suggestion:
                 if query['keyword'] not in duplicates:
                     duplicates.add(query['keyword'])
-                    self.results.append(query)
+                    # allows same keywords with multiple keywords
+                    # self.results.append(query)
                     if query['keyword'] not in self.already_fetched:
+                        # does not allow same keyword with multiple keywords
+                        # this line is temporary need to remove after fetching 10 categories
+                        self.results.append(query)
                         self.queue.add(query['keyword'])   
         self.keywords_count += len(self.results)
 
@@ -129,4 +133,10 @@ def uploadFileToS3(filepath,filename):
         Key = KEY, 
         Body = open(PATH_IN_COMPUTER, 'rb')
     )
+    uploadcsvfile(filepath)
     return
+
+def is_file_empty(file_path):
+    """ Check if file is empty by confirming if its size is 0 bytes"""
+    # Check if file exist and it is empty
+    return os.path.exists(file_path) and os.stat(file_path).st_size == 0
