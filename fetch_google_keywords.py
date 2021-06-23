@@ -60,7 +60,6 @@ def getSearchKeywords():
             ofile.close()
             # updates seed keyword fetching status to 1 which is Inprocess
             updatestatus(s_keyword['id'], 1)
-        
         while(stop==0 and len(keyword_getter.queue) > 0):
             ofile = open(csv_filepath, 'a',encoding="utf-8", newline="")
             writer = csv.DictWriter(ofile, fieldnames=[
@@ -119,9 +118,10 @@ def getSearchKeywords():
             try:
                 if os.stat(csv_filepath).st_size != 0:
                     uploadFileToS3(csv_filepath,csv_filename)
+                    updatestatus(s_keyword['id'], 2)
             except:
+                updatestatus(s_keyword['id'], 0)
                 pass
-            updatestatus(s_keyword['id'], 2)   
         
 
 

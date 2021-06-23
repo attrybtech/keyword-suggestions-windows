@@ -3,11 +3,12 @@ import os
 import time
 import csv
 import json
-import boto3 
+import boto3
+import random 
 import requests
 # from fake_useragent import UserAgent
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import SoftwareName, OperatingSystem
+# from random_user_agent.user_agent import UserAgent
+# from random_user_agent.params import SoftwareName, OperatingSystem
 
 base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
 # base_url = "http://127.0.0.1:8000/"
@@ -24,12 +25,12 @@ class GetGoogleSearchKeywords:
         self.keywords_count = 0
         self.results = []
 
-    def getUserAgent(self):
-        software_names = [SoftwareName.CHROME.value]
-        operating_systems = [OperatingSystem.WINDOWS.value]
-        user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100) 
-        user_agent = user_agent_rotator.get_random_user_agent()
-        return user_agent
+    # def getUserAgent(self):
+    #     software_names = [SoftwareName.CHROME.value]
+    #     operating_systems = [OperatingSystem.WINDOWS.value]
+    #     user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100) 
+    #     user_agent = user_agent_rotator.get_random_user_agent()
+    #     return user_agent
 
     def checkSeedKeywordExists(self, keyword, meta_keyword):
         """ 
@@ -43,11 +44,18 @@ class GetGoogleSearchKeywords:
 
     def fetchSuggestion(self, keyword, seed_keyword, meta_keyword):
         """ return list of suggestion based on the geolocation and language for a seed keyword """
+        user_agent_list = [
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Safari/605.1.15',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:77.0) Gecko/20100101 Firefox/77.0',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36',
+        ]
         url = "http://suggestqueries.google.com/complete/search?client=chrome&hl={}&gl={}&callback=?&q={}".format(
             self.language, self.country, keyword)
-        # ua = UserAgent(use_cache_server=False, verify_ssl=False)
-        # headers = {"user-agent": ua.chrome, "dataType": "jsonp"}
-        headers = {"user-agent": self.getUserAgent(), "dataType": "jsonp"}
+
+        user_agent = random.choice(user_agent_list)
+        headers = {"user-agent": user_agent, "dataType": "jsonp"}
 
         response = requests.get(url, headers=headers, verify=True)
         suggestions = json.loads(response.text)
