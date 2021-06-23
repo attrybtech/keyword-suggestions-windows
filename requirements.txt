@@ -1,3 +1,5 @@
 requests==2.25.1
 fake-useragent==0.1.11
 tk==0.1.0
+random-user-agent==1.0.1
+boto3==1.17.98
