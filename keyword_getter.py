@@ -6,9 +6,6 @@ import json
 import boto3
 import random 
 import requests
-# from fake_useragent import UserAgent
-# from random_user_agent.user_agent import UserAgent
-# from random_user_agent.params import SoftwareName, OperatingSystem
 
 base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
 # base_url = "http://127.0.0.1:8000/"
@@ -25,13 +22,6 @@ class GetGoogleSearchKeywords:
         self.keywords_count = 0
         self.results = []
 
-    # def getUserAgent(self):
-    #     software_names = [SoftwareName.CHROME.value]
-    #     operating_systems = [OperatingSystem.WINDOWS.value]
-    #     user_agent_rotator = UserAgent(software_names=software_names, operating_systems=operating_systems, limit=100) 
-    #     user_agent = user_agent_rotator.get_random_user_agent()
-    #     return user_agent
-
     def checkSeedKeywordExists(self, keyword, meta_keyword):
         """ 
         This function checks whether suggestions has meta keywords in it
@@ -44,6 +34,7 @@ class GetGoogleSearchKeywords:
 
     def fetchSuggestion(self, keyword, seed_keyword, meta_keyword):
         """ return list of suggestion based on the geolocation and language for a seed keyword """
+        # user agent is an HTTP browser request header that gives servers information regarding the client device and/or operating system on which the browser is running
         user_agent_list = [
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.1.1 Safari/605.1.15',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0',
@@ -53,40 +44,42 @@ class GetGoogleSearchKeywords:
         ]
         url = "http://suggestqueries.google.com/complete/search?client=chrome&hl={}&gl={}&callback=?&q={}".format(
             self.language, self.country, keyword)
-
         user_agent = random.choice(user_agent_list)
         headers = {"user-agent": user_agent, "dataType": "jsonp"}
-
         response = requests.get(url, headers=headers, verify=True)
-        suggestions = json.loads(response.text)
-
-        sugg = []
-        index = 0
-        relevancies = []
-        if "google:suggestrelevance" in suggestions[4].keys():
-            relevancies = suggestions[4]['google:suggestrelevance']
-        for word in suggestions[1]:
-            if self.checkSeedKeywordExists(word, meta_keyword):
-                sugg.append({
-                    'keyword': word,
-                    'relevancy_score': relevancies[index] if len(relevancies) > 0 else None,
-                    'seed_keyword': seed_keyword,
-                    'meta_keyword': meta_keyword,
-                })
-            else:
-                continue
-            index += 1
-
-        return sugg
+        if response.status_code == 200:
+            suggestions = json.loads(response.text)
+            sugg = []
+            index = 0
+            relevancies = []
+            if "google:suggestrelevance" in suggestions[4].keys():
+                relevancies = suggestions[4]['google:suggestrelevance']
+            for word in suggestions[1]:
+                if self.checkSeedKeywordExists(word, meta_keyword):
+                    sugg.append({
+                        'keyword': word,
+                        'relevancy_score': relevancies[index] if len(relevancies) > 0 else None,
+                        'seed_keyword': seed_keyword,
+                        'meta_keyword': meta_keyword,
+                    })
+                else:
+                    continue
+                index += 1
+            return sugg
+        # returning false when google blocks an ip for some time 
+        return False
 
     def fetchRelatedkeywords(self, keyword, meta_keyword):
         """ fetches all the suggestions when an array of strings formed by seed keyword concatenated with characters a to z  """
         suffix = ["", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
                   "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w" "x", "y", "z"]
         suffix_arr = list(map(lambda x: keyword+" "+x, suffix))
+        # removes duplicates for a seed keyword
         duplicates = set()
         for word in suffix_arr:
             suggestion = self.fetchSuggestion(word, keyword, meta_keyword)
+            if suggestion == False:
+                return False
             self.api_rate_limit+=1
             for query in suggestion:
                 if query['keyword'] not in duplicates:
@@ -128,6 +121,7 @@ def uploadcsvfile(csv_filename):
     return res.status_code
 
 def doesJsonFileExists(json_filename):
+    """ checks json file exists in a path  """
     return os.path.exists(json_filename)
 
 def uploadFileToS3(filepath,filename):
@@ -154,7 +148,13 @@ def uploadFileToS3(filepath,filename):
     uploadcsvfile(filepath)
     return
 
-def is_file_empty(file_path):
-    """ Check if file is empty by confirming if its size is 0 bytes"""
-    # Check if file exist and it is empty
-    return os.path.exists(file_path) and os.stat(file_path).st_size == 0
+def addLog(log_info,seed_keyword="",meta_keyword=""):
+    """ adding logs to the databse """
+    payload = {
+        "user" : os.getlogin(),
+        "seed_keyword":seed_keyword,
+        "meta_keyword":meta_keyword,
+        "log_info":log_info
+    }
+    res = requests.post('{}add/issue/'.format(base_url),data=payload)
+    return res.status_code
