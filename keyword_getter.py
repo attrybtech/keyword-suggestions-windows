@@ -3,31 +3,45 @@ import os
 import time
 import csv
 import json
-import boto3
+import boto3 # helps in accessing aws s3
 import random 
 import requests
 
+# api base url from which we are fetching seed keywords
 base_url = "http://ec2-13-126-117-106.ap-south-1.compute.amazonaws.com:8000/"
-# base_url = "http://127.0.0.1:8000/"
 
 class GetGoogleSearchKeywords:
+    """ 
+    input : seed keyword
+    output : list of suggestions for a seed keyword
+    """
     def __init__(self):
         """ global variables """
-        self.queue = set()
-        self.already_fetched = set()
-        self.country = "US"
-        self.language = "en"
-        self.threshold_count = 50000
-        self.api_rate_limit = 0
-        self.keywords_count = 0
-        self.results = []
+        self.queue = set() # list of seed keywords for which suggestions needs to be fetched
+        self.already_fetched = set() # list of seed keywords for which suggestions has been fetched
+        self.country = "US" # defining from which country we need to fetch suggestions from
+        self.language = "en" # defining language of a suggestion
+        self.threshold_count = 50000 # this variables helps in writing keywords data into a new file if keywords count in existing csv file crossed threshold count
+        self.api_rate_limit = 0 # counts no of api calls has been made and if api calls crosses 750 we put process to sleep for 60sec
+        self.keywords_count = 0 # counts no of keywords has been fetched for a seed keyword so that we can compare with threshold count and we can write data into new csv file
+        self.results = [] # parameter which stores suggestions which we write into csv file
 
     def checkSeedKeywordExists(self, keyword, meta_keyword):
         """ 
-        This function checks whether suggestions has meta keywords in it
+        This function checks whether suggestions has seed keywords.
         """
         keyword_ = re.sub('[^A-Za-z0-9]+', '', keyword)
-        if meta_keyword.lower() in keyword.lower() or meta_keyword.lower() in keyword_.lower():
+        split_meta_keyword =  meta_keyword.split()
+        condition = False
+        """ 
+        splitting meta keyword with space and checking each word from meta keyword exists in the keyword
+        example :: for keyword "air bbq fryer" and meta keyword "air fryer" we split meta keyword
+        whch is ["air","fryer"] and we check each value in the array exists in the keyword "air bbq fryer"
+        """
+        if len(split_meta_keyword) > 1:
+            condition = all(x.lower() in keyword.lower() for x in split_meta_keyword)
+
+        if meta_keyword.lower() in keyword.lower() or meta_keyword.lower() in keyword_.lower() or condition:
             return True
         else:
             return False
@@ -52,13 +66,21 @@ class GetGoogleSearchKeywords:
             sugg = []
             index = 0
             relevancies = []
+            suggesttypes = []
+            verbatimrelevance = ""
             if "google:suggestrelevance" in suggestions[4].keys():
                 relevancies = suggestions[4]['google:suggestrelevance']
+            if "google:suggesttype" in suggestions[4].keys():
+                suggesttypes = suggestions[4]['google:suggesttype']
+            if "google:verbatimrelevance" in suggestions[4].keys():
+                verbatimrelevance = suggestions[4]['google:verbatimrelevance']
             for word in suggestions[1]:
                 if self.checkSeedKeywordExists(word, meta_keyword):
                     sugg.append({
                         'keyword': word,
                         'relevancy_score': relevancies[index] if len(relevancies) > 0 else None,
+                        'suggesttype':suggesttypes[index] if len(suggesttypes) > 0 else None,
+                        'verbatimrelevance' : verbatimrelevance,
                         'seed_keyword': seed_keyword,
                         'meta_keyword': meta_keyword,
                     })
@@ -71,9 +93,12 @@ class GetGoogleSearchKeywords:
 
     def fetchRelatedkeywords(self, keyword, meta_keyword):
         """ fetches all the suggestions when an array of strings formed by seed keyword concatenated with characters a to z  """
+        prefix = ["how", "which", "why", "where", "who", "when", "are", "what"]
         suffix = ["", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l",
                   "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w" "x", "y", "z"]
         suffix_arr = list(map(lambda x: keyword+" "+x, suffix))
+        prefix_arr = list(map(lambda x: x+" "+keyword, prefix))
+        suffix_arr.extend(prefix_arr)
         # removes duplicates for a seed keyword
         duplicates = set()
         for word in suffix_arr:

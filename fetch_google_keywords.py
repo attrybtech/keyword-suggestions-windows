@@ -1,20 +1,63 @@
 import os
 import sys
 import time
-from tkinter import *
-import tkinter.messagebox
-from threading import *
-from keyword_getter import *
-from tkinter import ttk
-import tkinter.font as fnt
+from tkinter import * # gui library for python
+import tkinter.messagebox # library for messagebox pop up on clicking a button
+from threading import * # library for runninng process asynchronously
+from keyword_getter import * # import classes and function defined keyword_getter 
+from tkinter import ttk # helps in defining progress bar
+import tkinter.font as fnt # helps in defining fonts to button text
 
 # defining tkinter window
 top = Tk()
-top.title('Keyword Tool')
-top.geometry('500x500') # Size 200, 200
+top.title('Keyword Tool') #defining window title
+top.geometry('500x500') # window size
 
 # defining progress bar widget
 progressbar = ttk.Progressbar(top, orient = HORIZONTAL,length = 400, mode = 'indeterminate',value=5)
+
+""" 
+Used threading module to run processes asynchronously . In our case we can start,stop and restart the process . without threading we cannot stop the process untill started has been completed 
+""" 
+def threading():
+    # Call getSearchKeywords function
+    """ starts the keywords extraction process """
+    global stop
+    stop = 0
+    # 
+    if startButton['state'] == NORMAL:
+        # defining message box on clicking the start button
+        MsgBox = tkinter.messagebox.askquestion ('Start Application','Are you sure you want to start the application',icon = 'question')
+        if MsgBox == 'yes':
+            t1=Thread(target=getSearchKeywords)
+            t1.start()
+            # activates the progress bar on starting the process
+            progressbar.pack(pady=120,padx=20,side=BOTTOM)
+            progressbar.start()
+            # diabling the start button and enabling the stop button
+            startButton['state'] = DISABLED
+            stopButton['state'] = NORMAL
+
+        
+def stopTheProcess():
+    """ stops the process """
+    # stop variables is used start(0) and stop(1) the process
+    global stop 
+    MsgBox = tkinter.messagebox.askquestion ('Exit Application','Are you sure you want to exit the application',icon = 'warning')
+    if MsgBox == 'yes':
+       stop = 1
+       startButton['state'] = NORMAL
+       stopButton['state'] = DISABLED
+       progressbar.pack_forget()
+
+
+def endProcess():
+    """ stops the process when an error raises """
+    global stop
+    stop = 1
+    startButton['state'] = NORMAL
+    stopButton['state'] = DISABLED
+    progressbar.pack_forget()
 
 def getSearchKeywords():
     # defining GetGoogleSearchKeywords class instance from keyword_getter.py file
@@ -40,12 +83,14 @@ def getSearchKeywords():
             json_filepath = os.path.join(application_path,json_filename)
             # for pending processes checks json file exists in repo to continue the process
             if not doesJsonFileExists(json_filepath) and s_keyword["keyword_fetching_status"] ==  1:
+                # changes status to 0 if status is 1 and json file does not exist
                 updatestatus(s_keyword['id'], 0)
                 continue
             # used for file naming
             index = 1
-            # distinguishes not started and pending seed keywords
+            # distinguishes not started and pending seed keywords 
             if s_keyword['keyword_fetching_status'] == 1:
+                # fetches queue and already fetched keywords from json file
                 jsonfile = open(json_filepath, "r")
                 queue = json.loads(jsonfile.read())
                 keyword_getter.queue = set(queue["queued_keywords"])
@@ -59,13 +104,14 @@ def getSearchKeywords():
                 # creates a csv file for new seed keyword
                 ofile = open(csv_filepath, 'w+',encoding="utf-8", newline="")
                 writer = csv.DictWriter(ofile, fieldnames=[
-                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword"])
+                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance"])
                 writer.writeheader()
                 ofile.close()
+            # checks if the queue has seed keywords to continue fetching related keywords for a seed keywords in queue
             while(stop==0 and len(keyword_getter.queue) > 0):
                 ofile = open(csv_filepath, 'a',encoding="utf-8", newline="")
                 writer = csv.DictWriter(ofile, fieldnames=[
-                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword"])
+                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance"])
                 seed_keyword = keyword_getter.queue.pop()
                 keyword_getter.already_fetched.add(seed_keyword)
                 related_keywords = keyword_getter.fetchRelatedkeywords(seed_keyword, meta_keyword)
@@ -100,12 +146,13 @@ def getSearchKeywords():
                 # conditon which checks api rate limit exceeds 750 so that we can suspend the process for few seconds
                 if keyword_getter.api_rate_limit >= 750 :
                     keyword_getter.api_rate_limit = 0
-                    time.sleep(15)
+                    time.sleep(60)
                 # condition which helps in writing data into new csv files after crossing threshold count
                 if keyword_getter.keywords_count > keyword_getter.threshold_count:
                     # uploads a csv file to the server
                     # uploadcsvfile(csv_filepath)
                     uploadFileToS3(csv_filepath,csv_filename)
+                    # defining new csv filename
                     if index == 1:
                         csv_filename = csv_filename.split(".")[0]+"_"+str(index)+".csv"
                     else:
@@ -114,13 +161,13 @@ def getSearchKeywords():
                     csv_filepath = os.path.join(application_path,csv_filename)
                     ofile = open(csv_filename, 'w+',encoding="utf-8", newline="")
                     writer = csv.DictWriter(ofile, fieldnames=[
-                        "keyword", "relevancy_score", "seed_keyword", "meta_keyword"])
+                        "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance"])
                     writer.writeheader()
                     ofile.close()
                     index += 1
                     keyword_getter.keywords_count = 0
                 keyword_getter.results = []
-            # definin 
+            # making all global variables empty for a new seed keyword 
             keyword_getter.queue = set()
             keyword_getter.already_fetched = set()
             keyword_getter.keywords_count = 0
@@ -129,47 +176,14 @@ def getSearchKeywords():
                 # updates seed keyword fetching status to 2 which is Completed
                 if s_keyword['keyword_fetching_status'] == 1:
                     updatestatus(s_keyword['id'], 2)
-                    uploadFileToS3(csv_filepath,csv_filename)        
+                    uploadFileToS3(csv_filepath,csv_filename) 
     except Exception as e:
         error = str(e)
         # function which add logs to the database
         addLog(error,seed_keyword,meta_keyword)
-        # time.sleep(2)
+        # kills the gui window
         top.destroy()
-        sys.exit()
-""" 
-Used threading module to run processes asynchronously . In our case we can start,stop and restart the process . without threading we cannot stop the process untill started has been completed 
-""" 
-def threading():
-    # Call getSearchKeywords function
-    """ starts the keywords extraction process """
-    global stop
-    stop = 0
-    # 
-    if startButton['state'] == NORMAL:
-        # defining message box on clicking the start button
-        MsgBox = tkinter.messagebox.askquestion ('Start Application','Are you sure you want to start the application',icon = 'question')
-        if MsgBox == 'yes':
-            t1=Thread(target=getSearchKeywords)
-            t1.start()
-            # activates the progress bar on starting the process
-            progressbar.pack(pady=120,padx=20,side=BOTTOM)
-            progressbar.start()
-            # diabling the start button and enabling the stop button
-            startButton['state'] = DISABLED
-            stopButton['state'] = NORMAL
 
-        
-def stop():
-    """ stops the process """
-    # stop variables is used start(0) and stop(1) the process
-    global stop 
-    MsgBox = tkinter.messagebox.askquestion ('Exit Application','Are you sure you want to exit the application',icon = 'warning')
-    if MsgBox == 'yes':
-       stop = 1
-       startButton['state'] = NORMAL
-       stopButton['state'] = DISABLED
-       progressbar.pack_forget()
 
 
 # tkinter frame is an container(rectangular areas of the screens) which can be used to organize the widgets(buttons,progress bar etc....)
@@ -178,7 +192,7 @@ app.place(anchor="c", relx=.50, rely=.50)
 
 # defining and organising start and stop button in the frame 
 startButton = Button(app, height=2, width=20, text ="Start", command = threading,font = fnt.Font(size = 12))
-stopButton = Button(app, height=2, width=20, text ="Stop", command = stop,font = fnt.Font(size = 12))
+stopButton = Button(app, height=2, width=20, text ="Stop", command = stopTheProcess,font = fnt.Font(size = 12))
 
 stopButton['state'] = DISABLED
 startButton.grid(pady=10, padx=10)
