@@ -104,14 +104,14 @@ def getSearchKeywords():
                 # creates a csv file for new seed keyword
                 ofile = open(csv_filepath, 'w+',encoding="utf-8", newline="")
                 writer = csv.DictWriter(ofile, fieldnames=[
-                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance"])
+                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance","suggestsubtype"])
                 writer.writeheader()
                 ofile.close()
             # checks if the queue has seed keywords to continue fetching related keywords for a seed keywords in queue
             while(stop==0 and len(keyword_getter.queue) > 0):
                 ofile = open(csv_filepath, 'a',encoding="utf-8", newline="")
                 writer = csv.DictWriter(ofile, fieldnames=[
-                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance"])
+                    "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance","suggestsubtype"])
                 seed_keyword = keyword_getter.queue.pop()
                 keyword_getter.already_fetched.add(seed_keyword)
                 related_keywords = keyword_getter.fetchRelatedkeywords(seed_keyword, meta_keyword)
@@ -161,7 +161,7 @@ def getSearchKeywords():
                     csv_filepath = os.path.join(application_path,csv_filename)
                     ofile = open(csv_filename, 'w+',encoding="utf-8", newline="")
                     writer = csv.DictWriter(ofile, fieldnames=[
-                        "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance"])
+                        "keyword", "relevancy_score", "seed_keyword", "meta_keyword","suggesttype","verbatimrelevance","suggestsubtype"])
                     writer.writeheader()
                     ofile.close()
                     index += 1

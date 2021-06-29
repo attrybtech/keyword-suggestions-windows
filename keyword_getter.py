@@ -67,6 +67,7 @@ class GetGoogleSearchKeywords:
             index = 0
             relevancies = []
             suggesttypes = []
+            suggestsubtypes = []
             verbatimrelevance = ""
             if "google:suggestrelevance" in suggestions[4].keys():
                 relevancies = suggestions[4]['google:suggestrelevance']
@@ -74,6 +75,8 @@ class GetGoogleSearchKeywords:
                 suggesttypes = suggestions[4]['google:suggesttype']
             if "google:verbatimrelevance" in suggestions[4].keys():
                 verbatimrelevance = suggestions[4]['google:verbatimrelevance']
+            if "google:suggestsubtypes" in suggestions[4].keys():
+                suggestsubtypes = suggestions[4]['google:suggestsubtypes']
             for word in suggestions[1]:
                 if self.checkSeedKeywordExists(word, meta_keyword):
                     sugg.append({
@@ -83,6 +86,7 @@ class GetGoogleSearchKeywords:
                         'verbatimrelevance' : verbatimrelevance,
                         'seed_keyword': seed_keyword,
                         'meta_keyword': meta_keyword,
+                        'suggestsubtype' : suggestsubtypes[index] if len(suggestsubtypes) > 0 else None,
                     })
                 else:
                     continue
